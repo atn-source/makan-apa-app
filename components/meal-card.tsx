@@ -7,9 +7,9 @@ import {
   MEAL_TYPE_LABELS, 
   MEAL_TYPE_ICONS, 
   SOURCE_LABELS, 
-  SOURCE_ICONS,
-  deleteMeal
+  SOURCE_ICONS
 } from '@/lib/meal-storage'
+import { deleteMealFromDb } from '@/lib/meal-database'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Star, Trash2, Edit2 } from 'lucide-react'
@@ -24,11 +24,12 @@ interface MealCardProps {
 export function MealCard({ meal, onEdit, onDelete, compact = false }: MealCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm('Hapus makanan ini?')) {
       setIsDeleting(true)
-      deleteMeal(meal.id)
-      onDelete?.(meal.id)
+      const ok = await deleteMealFromDb(meal.id)
+      if (ok) onDelete?.(meal.id)
+      else setIsDeleting(false)
     }
   }
 

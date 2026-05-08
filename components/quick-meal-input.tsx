@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { parseQuickMeal, generateId, getToday, saveMeal, MEAL_TYPE_LABELS, SOURCE_LABELS } from '@/lib/meal-storage'
+import { parseQuickMeal, getToday, MEAL_TYPE_LABELS, SOURCE_LABELS } from '@/lib/meal-storage'
+import { saveMealToDb } from '@/lib/meal-database'
 import type { Meal, MealType, MealSource } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,7 +42,7 @@ export function QuickMealInput({ defaultMealType, defaultDate, onMealAdded, onOp
     }
   }, [input, defaultMealType])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!preview?.food) {
@@ -51,8 +52,7 @@ export function QuickMealInput({ defaultMealType, defaultDate, onMealAdded, onOp
 
     // Check if we have enough info for quick save
     if (preview.mealType && preview.food) {
-      const newMeal: Meal = {
-        id: generateId(),
+      const savedMeal = await saveMealToDb({
         date: defaultDate || getToday(),
         mealType: preview.mealType,
         food: preview.food,
@@ -62,14 +62,13 @@ export function QuickMealInput({ defaultMealType, defaultDate, onMealAdded, onOp
         rating: preview.rating,
         notes: preview.notes,
         tags: preview.tags,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+      })
       
-      saveMeal(newMeal)
-      onMealAdded?.(newMeal)
-      setInput('')
-      setPreview(null)
+      if (savedMeal) {
+        onMealAdded?.(savedMeal)
+        setInput('')
+        setPreview(null)
+      }
     } else {
       // Open full form with parsed data
       onOpenFullForm?.(preview)

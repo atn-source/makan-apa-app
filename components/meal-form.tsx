@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import type { Meal, MealType, MealSource } from '@/lib/types'
 import { 
-  saveMeal, 
-  generateId, 
   getToday, 
   MEAL_TYPE_LABELS, 
   MEAL_TYPE_ICONS,
   SOURCE_LABELS,
   SOURCE_ICONS
 } from '@/lib/meal-storage'
+import { saveMealToDb, updateMealInDb } from '@/lib/meal-database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -63,13 +62,12 @@ export function MealForm({ initialData, editMeal, onSave, onCancel }: MealFormPr
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!validateForm()) return
 
-    const meal: Meal = {
-      id: editMeal?.id || generateId(),
+    const mealData = {
       date: formData.date!,
       mealType: formData.mealType!,
       food: formData.food!.trim(),
@@ -79,12 +77,13 @@ export function MealForm({ initialData, editMeal, onSave, onCancel }: MealFormPr
       rating: formData.rating || undefined,
       notes: formData.notes?.trim() || undefined,
       tags: formData.tags?.length ? formData.tags : undefined,
-      createdAt: editMeal?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     }
     
-    saveMeal(meal)
-    onSave?.(meal)
+    const savedMeal = editMeal
+      ? await updateMealInDb(editMeal.id, mealData)
+      : await saveMealToDb(mealData)
+
+    if (savedMeal) onSave?.(savedMeal)
   }
 
   const toggleTag = (tag: string) => {

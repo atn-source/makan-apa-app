@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { Meal, MealType } from '@/lib/types'
-import { getMealsForDate, getToday, formatDate, duplicateMealForDate, getLastMealForType, formatCurrency } from '@/lib/meal-storage'
+import { getToday, formatDate, formatCurrency } from '@/lib/meal-storage'
+import { getMealsForDateFromDb, getLastMealForTypeFromDb, duplicateMealForDateInDb } from '@/lib/meal-database'
 import { MealCard, EmptyMealSlot } from '@/components/meal-card'
 import { QuickMealInput } from '@/components/quick-meal-input'
 import { MealForm } from '@/components/meal-form'
@@ -19,8 +20,8 @@ export function TodayScreen() {
   const [initialFormData, setInitialFormData] = useState<Partial<Meal>>({})
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const loadMeals = useCallback(() => {
-    const dayMeals = getMealsForDate(selectedDate)
+  const loadMeals = useCallback(async () => {
+    const dayMeals = await getMealsForDateFromDb(selectedDate)
     setMeals(dayMeals)
   }, [selectedDate])
 
@@ -73,10 +74,10 @@ export function TodayScreen() {
   }
 
 
-  const handleRepeatLastMeal = (mealType?: MealType) => {
-    const lastMeal = getLastMealForType(mealType)
+  const handleRepeatLastMeal = async (mealType?: MealType) => {
+    const lastMeal = await getLastMealForTypeFromDb(mealType)
     if (!lastMeal) return
-    duplicateMealForDate(lastMeal, selectedDate, mealType || lastMeal.mealType)
+    await duplicateMealForDateInDb(lastMeal, selectedDate, mealType || lastMeal.mealType)
     setRefreshKey(k => k + 1)
   }
 

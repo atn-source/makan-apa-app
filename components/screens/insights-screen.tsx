@@ -3,17 +3,20 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { Meal, MealStats } from '@/lib/types'
 import { 
-  getMeals, 
-  getMealsForDateRange, 
-  calculateStats, 
   formatCurrency, 
   formatShortDate,
   getDaysAgo,
   getToday,
-  downloadMealsCsv,
-  getWeeklySummary
 } from '@/lib/meal-storage'
-import { clearAllData, restoreDemoData } from '@/lib/demo-data'
+import {
+  getMealsFromDb,
+  getMealsForDateRangeFromDb,
+  calculateStatsFromMeals,
+  downloadMealsCsvFromMeals,
+  getWeeklySummaryFromMeals,
+  clearAllMealsFromDb,
+  restoreDemoMealsToDb,
+} from '@/lib/meal-database'
 import { MealCard } from '@/components/meal-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -43,22 +46,26 @@ export function InsightsScreen() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
-    let filteredMeals: Meal[]
-    const today = getToday()
-    
-    switch (timeRange) {
-      case '7d':
-        filteredMeals = getMealsForDateRange(getDaysAgo(7), today)
-        break
-      case '30d':
-        filteredMeals = getMealsForDateRange(getDaysAgo(30), today)
-        break
-      default:
-        filteredMeals = getMeals()
+    async function loadData() {
+      let filteredMeals: Meal[]
+      const today = getToday()
+      
+      switch (timeRange) {
+        case '7d':
+          filteredMeals = await getMealsForDateRangeFromDb(getDaysAgo(7), today)
+          break
+        case '30d':
+          filteredMeals = await getMealsForDateRangeFromDb(getDaysAgo(30), today)
+          break
+        default:
+          filteredMeals = await getMealsFromDb()
+      }
+      
+      setMeals(filteredMeals)
+      setStats(calculateStatsFromMeals(filteredMeals))
     }
-    
-    setMeals(filteredMeals)
-    setStats(calculateStats(filteredMeals))
+
+    loadData()
   }, [timeRange, refreshKey])
 
   const dailySpending = useMemo(() => {
@@ -102,20 +109,20 @@ export function InsightsScreen() {
 
 
   const handleExportCsv = () => {
-    downloadMealsCsv()
+    downloadMealsCsvFromMeals(meals)
   }
 
-  const handleClearAllData = () => {
+  const handleClearAllData = async () => {
     if (!confirm('Hapus semua catatan makanan? Tindakan ini tidak bisa dibatalkan.')) return
-    clearAllData()
+    await clearAllMealsFromDb()
     setSearchQuery('')
     setShowJournal(false)
     setRefreshKey(k => k + 1)
   }
 
-  const handleRestoreDemoData = () => {
+  const handleRestoreDemoData = async () => {
     if (!confirm('Ganti data saat ini dengan demo data?')) return
-    restoreDemoData()
+    await restoreDemoMealsToDb()
     setRefreshKey(k => k + 1)
   }
 
@@ -257,7 +264,7 @@ export function InsightsScreen() {
                 <div>
                   <h2 className="font-semibold text-foreground mb-1">Ringkasan Mingguan</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    {getWeeklySummary(7)}
+                    {getWeeklySummaryFromMeals(meals, 7)}
                   </p>
                 </div>
               </div>

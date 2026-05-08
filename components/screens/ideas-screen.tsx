@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import type { MealRecommendation } from '@/lib/types'
-import { getRecommendations, formatCurrency, SOURCE_ICONS } from '@/lib/meal-storage'
+import { formatCurrency, SOURCE_ICONS } from '@/lib/meal-storage'
+import { getRecommendationsFromDb } from '@/lib/meal-database'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,10 +22,10 @@ export function IdeasScreen() {
   const [isSpinning, setIsSpinning] = useState(false)
   const [spinningText, setSpinningText] = useState('')
 
-  const loadRecommendations = () => {
+  const loadRecommendations = async () => {
     setLoading(true)
     const budget = budgetRange[0] > 0 ? budgetRange[0] * 1000 : undefined
-    const recs = getRecommendations(budget)
+    const recs = await getRecommendationsFromDb(budget)
     setRecommendations(recs)
     setLoading(false)
   }
