@@ -3,20 +3,15 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { Meal, MealStats } from '@/lib/types'
 import { 
+  calculateStats, 
   formatCurrency, 
   formatShortDate,
   getDaysAgo,
   getToday,
+  generateMealsCsv
 } from '@/lib/meal-storage'
-import {
-  getMealsFromDb,
-  getMealsForDateRangeFromDb,
-  calculateStatsFromMeals,
-  downloadMealsCsvFromMeals,
-  getWeeklySummaryFromMeals,
-  clearAllMealsFromDb,
-  restoreDemoMealsToDb,
-} from '@/lib/meal-database'
+import { getMealsFromDb, getMealsForDateRangeFromDb, clearAllMealsFromDb } from '@/lib/meal-database'
+import { restoreDemoDataToDb } from '@/lib/demo-data'
 import { MealCard } from '@/components/meal-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -49,7 +44,7 @@ export function InsightsScreen() {
     async function loadData() {
       let filteredMeals: Meal[]
       const today = getToday()
-      
+
       switch (timeRange) {
         case '7d':
           filteredMeals = await getMealsForDateRangeFromDb(getDaysAgo(7), today)
@@ -60,9 +55,9 @@ export function InsightsScreen() {
         default:
           filteredMeals = await getMealsFromDb()
       }
-      
+
       setMeals(filteredMeals)
-      setStats(calculateStatsFromMeals(filteredMeals))
+      setStats(calculateStats(filteredMeals))
     }
 
     loadData()
@@ -109,7 +104,16 @@ export function InsightsScreen() {
 
 
   const handleExportCsv = () => {
-    downloadMealsCsvFromMeals(meals)
+    const csv = generateMealsCsv(meals)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `makan-apa-journal-${getToday()}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const handleClearAllData = async () => {
@@ -122,7 +126,7 @@ export function InsightsScreen() {
 
   const handleRestoreDemoData = async () => {
     if (!confirm('Ganti data saat ini dengan demo data?')) return
-    await restoreDemoMealsToDb()
+    await restoreDemoDataToDb()
     setRefreshKey(k => k + 1)
   }
 
@@ -264,7 +268,7 @@ export function InsightsScreen() {
                 <div>
                   <h2 className="font-semibold text-foreground mb-1">Ringkasan Mingguan</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    {getWeeklySummaryFromMeals(meals, 7)}
+                    {`Periode ini berisi ${meals.length} catatan, total belanja ${formatCurrency(stats?.totalSpending || 0)}, dengan ${stats?.outsideMeals || 0} makan luar/delivery dan ${stats?.homeCookedMeals || 0} masak di rumah.`}
                   </p>
                 </div>
               </div>

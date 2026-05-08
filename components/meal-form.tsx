@@ -67,7 +67,7 @@ export function MealForm({ initialData, editMeal, onSave, onCancel }: MealFormPr
     
     if (!validateForm()) return
 
-    const mealData = {
+    const mealData: Partial<Meal> = {
       date: formData.date!,
       mealType: formData.mealType!,
       food: formData.food!.trim(),
@@ -78,7 +78,7 @@ export function MealForm({ initialData, editMeal, onSave, onCancel }: MealFormPr
       notes: formData.notes?.trim() || undefined,
       tags: formData.tags?.length ? formData.tags : undefined,
     }
-    
+
     const savedMeal = editMeal
       ? await updateMealInDb(editMeal.id, mealData)
       : await saveMealToDb(mealData)

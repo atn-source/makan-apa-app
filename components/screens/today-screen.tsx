@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Meal, MealType } from '@/lib/types'
 import { getToday, formatDate, formatCurrency } from '@/lib/meal-storage'
-import { getMealsForDateFromDb, getLastMealForTypeFromDb, duplicateMealForDateInDb } from '@/lib/meal-database'
+import { getMealsForDateFromDb, duplicateMealForDateFromDb, getLastMealForTypeFromDb } from '@/lib/meal-database'
 import { MealCard, EmptyMealSlot } from '@/components/meal-card'
 import { QuickMealInput } from '@/components/quick-meal-input'
 import { MealForm } from '@/components/meal-form'
@@ -77,7 +77,7 @@ export function TodayScreen() {
   const handleRepeatLastMeal = async (mealType?: MealType) => {
     const lastMeal = await getLastMealForTypeFromDb(mealType)
     if (!lastMeal) return
-    await duplicateMealForDateInDb(lastMeal, selectedDate, mealType || lastMeal.mealType)
+    await duplicateMealForDateFromDb(lastMeal, selectedDate, mealType || lastMeal.mealType)
     setRefreshKey(k => k + 1)
   }
 

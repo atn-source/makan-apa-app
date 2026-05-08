@@ -52,7 +52,7 @@ export function QuickMealInput({ defaultMealType, defaultDate, onMealAdded, onOp
 
     // Check if we have enough info for quick save
     if (preview.mealType && preview.food) {
-      const savedMeal = await saveMealToDb({
+      const newMeal = await saveMealToDb({
         date: defaultDate || getToday(),
         mealType: preview.mealType,
         food: preview.food,
@@ -63,12 +63,10 @@ export function QuickMealInput({ defaultMealType, defaultDate, onMealAdded, onOp
         notes: preview.notes,
         tags: preview.tags,
       })
-      
-      if (savedMeal) {
-        onMealAdded?.(savedMeal)
-        setInput('')
-        setPreview(null)
-      }
+
+      if (newMeal) onMealAdded?.(newMeal)
+      setInput('')
+      setPreview(null)
     } else {
       // Open full form with parsed data
       onOpenFullForm?.(preview)

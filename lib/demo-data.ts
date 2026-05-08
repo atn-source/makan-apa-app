@@ -1,5 +1,6 @@
 import type { Meal } from './types'
 import { saveMeal, getMeals, generateId, getDaysAgo, getToday, clearAllMeals } from './meal-storage'
+import { clearAllMealsFromDb, getMealsFromDb, saveMealToDb } from './meal-database'
 
 const DEMO_DATA_DISABLED_KEY = 'makan-apa-demo-disabled'
 
@@ -153,4 +154,21 @@ export function restoreDemoData(): void {
   }
   clearAllMeals()
   loadDemoData()
+}
+
+
+export async function loadDemoDataToDb(): Promise<void> {
+  const existingMeals = await getMealsFromDb()
+  if (existingMeals.length > 0) return
+
+  for (const mealData of DEMO_MEALS) {
+    await saveMealToDb(mealData)
+  }
+}
+
+export async function restoreDemoDataToDb(): Promise<void> {
+  await clearAllMealsFromDb()
+  for (const mealData of DEMO_MEALS) {
+    await saveMealToDb(mealData)
+  }
 }

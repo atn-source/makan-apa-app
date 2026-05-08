@@ -5,14 +5,14 @@ import { BottomNav, type TabType } from '@/components/bottom-nav'
 import { TodayScreen } from '@/components/screens/today-screen'
 import { IdeasScreen } from '@/components/screens/ideas-screen'
 import { InsightsScreen } from '@/components/screens/insights-screen'
-import { loadDemoData } from '@/lib/demo-data'
+import { loadDemoDataToDb } from '@/lib/demo-data'
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabType>('today')
 
   useEffect(() => {
-    // Load demo data on first visit
-    loadDemoData()
+    // Load demo data into Supabase on first visit if the database is empty
+    loadDemoDataToDb()
   }, [])
 
   return (

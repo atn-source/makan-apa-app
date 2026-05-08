@@ -27,9 +27,9 @@ export function MealCard({ meal, onEdit, onDelete, compact = false }: MealCardPr
   const handleDelete = async () => {
     if (confirm('Hapus makanan ini?')) {
       setIsDeleting(true)
-      const ok = await deleteMealFromDb(meal.id)
-      if (ok) onDelete?.(meal.id)
-      else setIsDeleting(false)
+      const deleted = await deleteMealFromDb(meal.id)
+      if (deleted) onDelete?.(meal.id)
+      setIsDeleting(false)
     }
   }
 
