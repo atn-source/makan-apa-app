@@ -12,22 +12,26 @@ import {
 } from '@/lib/meal-storage'
 import { getMealsFromDb, getMealsForDateRangeFromDb, clearAllMealsFromDb } from '@/lib/meal-database'
 import { restoreDemoDataToDb } from '@/lib/demo-data'
+import { generateHealthRecommendation } from '@/lib/recommendations'
 import { MealCard } from '@/components/meal-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { 
-  BarChart3, 
-  Home, 
-  ShoppingBag, 
-  Flame, 
-  Leaf, 
-  Star, 
+import {
+  BarChart3,
+  Home,
+  ShoppingBag,
+  Flame,
+  Leaf,
+  Star,
   Search,
   DollarSign,
   Download,
   Trash2,
-  FileText
+  FileText,
+  Droplet,
+  TrendingUp,
+  Lightbulb
 } from 'lucide-react'
 
 type TimeRange = '7d' | '30d' | 'all'
@@ -255,9 +259,71 @@ export function InsightsScreen() {
                 </p>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Droplet className="h-4 w-4 text-blue-500" />
+                  <span className="text-xs text-muted-foreground">Minuman Manis</span>
+                </div>
+                <p className="text-xl font-bold text-foreground">
+                  {stats.sugaryDrinks}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-orange-500" />
+                  <span className="text-xs text-muted-foreground">Tinggi Kalori</span>
+                </div>
+                <p className="text-xl font-bold text-foreground">
+                  {stats.highCalorieMeals}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span className="text-xs text-muted-foreground">Variasi Protein</span>
+                </div>
+                <p className="text-xl font-bold text-foreground">
+                  {stats.proteinVariety.length}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  jenis
+                </p>
+              </CardContent>
+            </Card>
           </section>
         )}
 
+        {/* Health Recommendation */}
+        {stats && meals.length > 0 && (() => {
+          const rec = generateHealthRecommendation(stats, meals)
+          if (!rec) return null
+          const bgClass = rec.priority === 'high' ? 'bg-destructive/10 border-destructive/20' : rec.priority === 'medium' ? 'bg-warning/10 border-warning/20' : 'bg-primary/5 border-primary/20'
+          return (
+            <section>
+              <Card className={`${bgClass}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl mt-0.5 shrink-0">{rec.icon}</span>
+                    <div className="flex-1">
+                      <h2 className="font-semibold text-foreground mb-1">💡 Rekomendasi Kesehatan</h2>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {rec.text}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          )
+        })()}
 
         {/* Weekly Summary */}
         <section>

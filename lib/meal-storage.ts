@@ -1,4 +1,5 @@
 import type { Meal, MealStats, MealRecommendation, MealType, MealSource } from './types'
+import { autoTagMeal } from './health-database'
 
 const STORAGE_KEY = 'makan-apa-meals'
 
@@ -46,34 +47,56 @@ export function getMealsForDateRange(startDate: string, endDate: string): Meal[]
 export function calculateStats(meals: Meal[]): MealStats {
   const totalSpending = meals.reduce((sum, m) => sum + (m.cost || 0), 0)
   const outsideMeals = meals.filter(m => m.source !== 'home').length
+  const deliveryFrequency = meals.filter(m => m.source === 'delivery').length
   const homeCookedMeals = meals.filter(m => m.source === 'home').length
-  const friedMeals = meals.filter(m => 
-    m.tags?.includes('fried') || 
-    m.food.toLowerCase().includes('goreng') ||
-    m.food.toLowerCase().includes('fried') ||
-    m.food.toLowerCase().includes('geprek')
-  ).length
-  const vegetableMeals = meals.filter(m => 
-    m.tags?.includes('vegetable') || 
-    m.food.toLowerCase().includes('sayur') ||
-    m.food.toLowerCase().includes('vegetable') ||
-    m.food.toLowerCase().includes('salad') ||
-    m.food.toLowerCase().includes('gado') ||
-    m.food.toLowerCase().includes('capcay')
-  ).length
-  
+
+  const friedMeals = meals.filter(m => {
+    const tags = m.tags || autoTagMeal(m.food).tags
+    return tags.includes('fried')
+  }).length
+
+  const vegetableMeals = meals.filter(m => {
+    const tags = m.tags || autoTagMeal(m.food).tags
+    return tags.includes('vegetable')
+  }).length
+
+  const sugaryDrinks = meals.filter(m => {
+    const tags = m.tags || autoTagMeal(m.food).tags
+    return tags.includes('sugary-drink')
+  }).length
+
+  const highCalorieMeals = meals.filter(m => {
+    const attrs = m.tags ? { tags: m.tags } : autoTagMeal(m.food)
+    // If tags exist but no calorie level stored, re-analyze
+    if (m.tags && m.tags.length > 0) {
+      return autoTagMeal(m.food).calorieLevel === 'high'
+    }
+    return attrs && 'calorieLevel' in attrs && (attrs as any).calorieLevel === 'high'
+  }).length
+
+  const proteinSet = new Set<string>()
+  meals.forEach(m => {
+    const tags = m.tags || autoTagMeal(m.food).tags
+    const proteinTag = tags.find(t => ['chicken', 'beef', 'fish', 'seafood', 'egg', 'tofu', 'tempeh'].includes(t))
+    if (proteinTag) proteinSet.add(proteinTag)
+  })
+
   const ratedMeals = meals.filter(m => m.rating)
-  const avgRating = ratedMeals.length > 0 
-    ? ratedMeals.reduce((sum, m) => sum + (m.rating || 0), 0) / ratedMeals.length 
+  const avgRating = ratedMeals.length > 0
+    ? ratedMeals.reduce((sum, m) => sum + (m.rating || 0), 0) / ratedMeals.length
     : 0
-  
+
   return {
     totalSpending,
     outsideMeals,
     homeCookedMeals,
     friedMeals,
     vegetableMeals,
-    avgRating
+    avgRating,
+    sugaryDrinks,
+    highCalorieMeals,
+    proteinVariety: Array.from(proteinSet),
+    deliveryFrequency
   }
 }
 
@@ -196,13 +219,7 @@ export function parseQuickMeal(input: string): Partial<Meal> {
   else if (/\b(enak banget|mantap|excellent|favorit|favorite|terbaik)\b/i.test(input)) result.rating = 5
   else if (/\b(enak|sedap|good|bagus|suka)\b/i.test(input)) result.rating = 4
   
-  const tags: string[] = []
-  if (/\b(goreng|fried|geprek|lele)\b/i.test(input)) tags.push('fried')
-  if (/\b(sayur|vegetable|salad|gado|capcay|kangkung|bayam)\b/i.test(input)) tags.push('vegetable')
-  if (/\b(pedas|spicy|sambal|mercon)\b/i.test(input)) tags.push('spicy')
-  if (/\b(manis|sweet|dessert|es teh|boba)\b/i.test(input)) tags.push('sweet')
-  if (/\b(sehat|healthy|light|ringan)\b/i.test(input)) tags.push('healthy')
-  if (tags.length > 0) result.tags = Array.from(new Set(tags))
+  // Auto-tag will be applied after food name is extracted
   
   let foodName = input
   const removePatterns = [
@@ -214,8 +231,13 @@ export function parseQuickMeal(input: string): Partial<Meal> {
   if (parsedCost.matchedText) foodName = foodName.replace(parsedCost.matchedText, '')
   removePatterns.forEach(pattern => { foodName = foodName.replace(pattern, '') })
   foodName = foodName.replace(/[,:;|]+/g, ' ').replace(/\s+/g, ' ').trim()
-  
-  if (foodName) result.food = titleCase(foodName)
+
+  if (foodName) {
+    result.food = titleCase(foodName)
+    // Auto-tag the meal based on food name
+    const healthAttrs = autoTagMeal(foodName)
+    result.tags = healthAttrs.tags
+  }
   return result
 }
 

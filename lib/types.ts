@@ -24,6 +24,11 @@ export interface MealStats {
   friedMeals: number
   vegetableMeals: number
   avgRating: number
+  // Health metrics
+  sugaryDrinks: number
+  highCalorieMeals: number
+  proteinVariety: string[]
+  deliveryFrequency: number
 }
 
 export interface MealRecommendation {
