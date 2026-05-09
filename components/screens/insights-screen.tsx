@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import type { Meal, MealStats } from '@/lib/types'
-import { 
-  calculateStats, 
-  formatCurrency, 
+import {
+  calculateStats,
+  formatCurrency,
   formatShortDate,
   getDaysAgo,
   getToday,
@@ -13,6 +13,8 @@ import {
 import { getMealsFromDb, getMealsForDateRangeFromDb, clearAllMealsFromDb } from '@/lib/meal-database'
 import { restoreDemoDataToDb } from '@/lib/demo-data'
 import { generateHealthRecommendation } from '@/lib/recommendations'
+import { calculateVendorAnalytics } from '@/lib/vendor-analytics'
+import { RestaurantDetailsScreen } from '@/components/screens/restaurant-details-screen'
 import { MealCard } from '@/components/meal-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -31,7 +33,12 @@ import {
   FileText,
   Droplet,
   TrendingUp,
-  Lightbulb
+  Lightbulb,
+  Utensils,
+  Calendar,
+  Compass,
+  Clock,
+  Sparkles
 } from 'lucide-react'
 
 type TimeRange = '7d' | '30d' | 'all'
@@ -43,6 +50,7 @@ export function InsightsScreen() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showJournal, setShowJournal] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedVendor, setSelectedVendor] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -94,10 +102,10 @@ export function InsightsScreen() {
 
   const filteredJournalMeals = useMemo(() => {
     if (!searchQuery.trim()) return meals.sort((a, b) => b.date.localeCompare(a.date))
-    
+
     const query = searchQuery.toLowerCase()
     return meals
-      .filter(meal => 
+      .filter(meal =>
         meal.food.toLowerCase().includes(query) ||
         meal.vendor?.toLowerCase().includes(query) ||
         meal.notes?.toLowerCase().includes(query) ||
@@ -105,6 +113,10 @@ export function InsightsScreen() {
       )
       .sort((a, b) => b.date.localeCompare(a.date))
   }, [meals, searchQuery])
+
+  const vendorAnalytics = useMemo(() => {
+    return calculateVendorAnalytics(meals)
+  }, [meals])
 
 
   const handleExportCsv = () => {
@@ -138,6 +150,15 @@ export function InsightsScreen() {
     '7d': '7 Hari',
     '30d': '30 Hari',
     'all': 'Semua'
+  }
+
+  if (selectedVendor) {
+    return (
+      <RestaurantDetailsScreen
+        vendor={selectedVendor}
+        onBack={() => setSelectedVendor(null)}
+      />
+    )
   }
 
   return (
@@ -324,6 +345,141 @@ export function InsightsScreen() {
             </section>
           )
         })()}
+
+        {/* Restaurant Analytics */}
+        {vendorAnalytics.allVendorStats.length > 0 && (
+          <section>
+            <h2 className="text-sm font-medium text-muted-foreground mb-3">
+              🍽️ Analisis Restoran
+            </h2>
+
+            {/* Spending Concentration */}
+            <div className="mb-3">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span className="text-xs text-muted-foreground font-medium">Spending Concentration</span>
+                  </div>
+                  <div className="space-y-2">
+                    {vendorAnalytics.spendingConcentration.topVendors.slice(0, 3).map(v => (
+                      <button
+                        key={v.vendor}
+                        onClick={() => setSelectedVendor(v.vendor)}
+                        className="w-full flex items-center justify-between text-sm hover:bg-secondary p-2 rounded transition-colors"
+                      >
+                        <span className="text-foreground truncate text-left">{v.vendor || 'Home'}</span>
+                        <span className="text-primary font-semibold shrink-0">{v.percentage}%</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Top 5 vendors = <span className="font-semibold text-foreground">{vendorAnalytics.spendingConcentration.topNPercentage}%</span> of budget
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* New vs Repeat */}
+            <div className="mb-3">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Compass className="h-4 w-4 text-blue-500" />
+                    <span className="text-xs text-muted-foreground font-medium">New vs Repeat</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">
+                        {vendorAnalytics.newVsRepeat.newPercentage}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Exploring</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">
+                        {vendorAnalytics.newVsRepeat.repeatPercentage}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Familiar</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    {vendorAnalytics.newVsRepeat.uniqueVendors} unique vendors out of {vendorAnalytics.newVsRepeat.totalMeals} meals
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Time to Repeat */}
+            {vendorAnalytics.timeToRepeat.length > 0 && (
+              <div className="mb-3">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="h-4 w-4 text-orange-500" />
+                      <span className="text-xs text-muted-foreground font-medium">Time to Repeat</span>
+                    </div>
+                    <div className="space-y-2">
+                      {vendorAnalytics.timeToRepeat.slice(0, 3).map(v => (
+                        <button
+                          key={v.vendor}
+                          onClick={() => setSelectedVendor(v.vendor)}
+                          className="w-full flex items-center justify-between text-sm hover:bg-secondary p-2 rounded transition-colors"
+                        >
+                          <span className="text-foreground truncate text-left">{v.vendor || 'Home'}</span>
+                          <span className="text-muted-foreground text-xs shrink-0">every {v.avgDaysBetween}d</span>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Day of Week Habits */}
+            {vendorAnalytics.dayOfWeekHabits.length > 0 && (
+              <div className="mb-3">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calendar className="h-4 w-4 text-green-500" />
+                      <span className="text-xs text-muted-foreground font-medium">Day of Week Habits</span>
+                    </div>
+                    <div className="space-y-2">
+                      {vendorAnalytics.dayOfWeekHabits.slice(0, 3).map(h => (
+                        <button
+                          key={h.vendor}
+                          onClick={() => setSelectedVendor(h.vendor)}
+                          className="w-full flex items-center justify-between text-sm hover:bg-secondary p-2 rounded transition-colors"
+                        >
+                          <span className="text-foreground truncate text-left">{h.vendor || 'Home'}</span>
+                          <span className="text-muted-foreground text-xs shrink-0">{h.mostCommonDay}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Vendor Discovery Streak */}
+            <div>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-4 w-4 text-purple-500" />
+                    <span className="text-xs text-muted-foreground font-medium">Restaurant Discovery</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">
+                    {vendorAnalytics.vendorDiscoveryStreak.uniqueVendors}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    unique restaurants ({vendorAnalytics.vendorDiscoveryStreak.avgNewPerWeek} new/week on avg)
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+        )}
 
         {/* Weekly Summary */}
         <section>
