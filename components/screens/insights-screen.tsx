@@ -14,6 +14,7 @@ import { getMealsFromDb, getMealsForDateRangeFromDb, clearAllMealsFromDb } from 
 import { restoreDemoDataToDb } from '@/lib/demo-data'
 import { generateHealthRecommendation } from '@/lib/recommendations'
 import { calculateVendorAnalytics } from '@/lib/vendor-analytics'
+import { RestaurantDetailsScreen } from '@/components/screens/restaurant-details-screen'
 import { MealCard } from '@/components/meal-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -49,6 +50,7 @@ export function InsightsScreen() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showJournal, setShowJournal] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedVendor, setSelectedVendor] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -148,6 +150,15 @@ export function InsightsScreen() {
     '7d': '7 Hari',
     '30d': '30 Hari',
     'all': 'Semua'
+  }
+
+  if (selectedVendor) {
+    return (
+      <RestaurantDetailsScreen
+        vendor={selectedVendor}
+        onBack={() => setSelectedVendor(null)}
+      />
+    )
   }
 
   return (
@@ -352,10 +363,14 @@ export function InsightsScreen() {
                   </div>
                   <div className="space-y-2">
                     {vendorAnalytics.spendingConcentration.topVendors.slice(0, 3).map(v => (
-                      <div key={v.vendor} className="flex items-center justify-between text-sm">
-                        <span className="text-foreground truncate">{v.vendor || 'Home'}</span>
-                        <span className="text-primary font-semibold">{v.percentage}%</span>
-                      </div>
+                      <button
+                        key={v.vendor}
+                        onClick={() => setSelectedVendor(v.vendor)}
+                        className="w-full flex items-center justify-between text-sm hover:bg-secondary p-2 rounded transition-colors"
+                      >
+                        <span className="text-foreground truncate text-left">{v.vendor || 'Home'}</span>
+                        <span className="text-primary font-semibold shrink-0">{v.percentage}%</span>
+                      </button>
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground mt-3">
@@ -405,10 +420,14 @@ export function InsightsScreen() {
                     </div>
                     <div className="space-y-2">
                       {vendorAnalytics.timeToRepeat.slice(0, 3).map(v => (
-                        <div key={v.vendor} className="flex items-center justify-between text-sm">
-                          <span className="text-foreground truncate">{v.vendor || 'Home'}</span>
-                          <span className="text-muted-foreground">every {v.avgDaysBetween}d</span>
-                        </div>
+                        <button
+                          key={v.vendor}
+                          onClick={() => setSelectedVendor(v.vendor)}
+                          className="w-full flex items-center justify-between text-sm hover:bg-secondary p-2 rounded transition-colors"
+                        >
+                          <span className="text-foreground truncate text-left">{v.vendor || 'Home'}</span>
+                          <span className="text-muted-foreground text-xs shrink-0">every {v.avgDaysBetween}d</span>
+                        </button>
                       ))}
                     </div>
                   </CardContent>
@@ -427,10 +446,14 @@ export function InsightsScreen() {
                     </div>
                     <div className="space-y-2">
                       {vendorAnalytics.dayOfWeekHabits.slice(0, 3).map(h => (
-                        <div key={h.vendor} className="flex items-center justify-between text-sm">
-                          <span className="text-foreground truncate">{h.vendor || 'Home'}</span>
-                          <span className="text-muted-foreground text-xs">{h.mostCommonDay}</span>
-                        </div>
+                        <button
+                          key={h.vendor}
+                          onClick={() => setSelectedVendor(h.vendor)}
+                          className="w-full flex items-center justify-between text-sm hover:bg-secondary p-2 rounded transition-colors"
+                        >
+                          <span className="text-foreground truncate text-left">{h.vendor || 'Home'}</span>
+                          <span className="text-muted-foreground text-xs shrink-0">{h.mostCommonDay}</span>
+                        </button>
                       ))}
                     </div>
                   </CardContent>
